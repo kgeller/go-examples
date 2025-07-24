@@ -1,0 +1,36 @@
+- name: input.type
+  type: keyword
+  description: Input type
+  title: Input type.
+  group: 1
+  level: extended
+- name: data_stream.type
+  type: constant_keyword
+  description: Data stream type.
+- name: data_stream.dataset
+  type: constant_keyword
+  description: Data stream dataset.
+- name: data_stream.namespace
+  type: constant_keyword
+  description: Data stream namespace.
+- name: event.module
+  type: constant_keyword
+  description: Event module
+  value: 1password
+- name: event.dataset
+  type: constant_keyword
+  description: Event dataset
+  value: 1password.item_usages
+- name: '@timestamp'
+  type: date
+  description: Event timestamp.
+- external: ecs
+  name: tags
+- name: process
+  type: group
+  fields:
+    - name: io
+      type: group
+      fields:
+        - name: bytes_skipped.length
+          external: ecs

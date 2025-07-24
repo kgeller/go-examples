@@ -1,0 +1,49 @@
+name: Go
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+# Only one build per ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  go-mod-tidy:
+    name: go-mod-tidy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: "*/*.sum"
+
+      - name: Run go mod tidy -diff
+        run: >
+          go run .github/each-module.go -cmd
+          'go mod tidy -diff'
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: "*/*.sum"
+
+      - name: Test
+        run: |
+          go run .github/each-module.go -cmd="go test ./..."
