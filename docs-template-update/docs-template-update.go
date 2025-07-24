@@ -42,7 +42,7 @@ Follow these exact guidelines:
 2. Restructure the document to follow the new template format provided
 3. If any content is not relevant to the new template, copy it to the Reference section and add a note it in a code comment for why it should be removed
 4. Do not include the following from the tempalte: initial comment from the template, the header placeholder, or the Reference -> ECS field reference section
-5. Always organize the datastreams together under the What data does this integration collect? section. For each datastream there should be
+5. Always organize the datastreams together under Reference section. For each datastream there should be
 a brief summary, exported fields, and sample events sections all separated with an empty line.
 6. Always prefix sample event placeholders with 'An example event for "data_stream_name" looks as following:'.
 7. Format your response appropriately for a Markdown file
