@@ -49,7 +49,8 @@ a brief summary, exported fields, and sample events sections all separated with 
 8. Replace any 'Exported fields' sections with the mustache placeholder: {{fields "data_stream_name"}}
 9. Replace any 'Sample event' sections with the mustache placeholder: {{event "data_stream_name"}}
 10. If there is no content for a section, you must add a code comment with some guidance to the user on what to add.
-11. Sync the document with the new template structure
+11. Do not include any reference to Elastic in the overall integration title. Just name it as the integration name.
+12. Sync the document with the new template structure
 
 Return ONLY the updated Markdown content, without any explanation or commentary.`
 )
