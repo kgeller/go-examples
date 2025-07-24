@@ -346,8 +346,7 @@ func generateUpdatedReadme(readmeContent, templateContent string) (string, error
 	}
 
 	// Build the complete prompt with system instructions and user content
-	completePrompt := fmt.Sprintf("%s\n\n%s", systemPrompt, fmt.Sprintf(userPromptTemplate, readmeContent, templateContent))
-	
+	completePrompt := fmt.Sprintf("%s\n\n%s", fmt.Sprintf(systemPrompt, readmeContent, templateContent), userPromptTemplate)	
 	// Send the request
 	resp, err := model.GenerateContent(ctx, genai.Text(completePrompt))
 	if err != nil {
