@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/generative-ai-go/genai"
 	"github.com/otiai10/copy"
@@ -23,47 +24,46 @@ const (
 	templateURL = "https://raw.githubusercontent.com/elastic/elastic-package/89b34ec09f562b2c1c921ba4b465b6ef96ea47de/internal/packages/archetype/_static/package-docs-readme.md.tmpl"
 	// System prompt for instructing the LLM
 	systemPrompt = `You are a documentation expert specializing in Elastic documentation templates.
-Your task is to transform the provided README file to conform to the new template structure.
+Your task is to transform the provided README file to conform to the new template structure. This is intended to be an additive process,
+so do not remove any existing content, only restructure it to fit the new template.
 
-Follow these exact steps:
-1. Replace any 'Exported fields' sections with the mustache placeholder: {{fields "data_stream_name"}}
-2. Replace any 'Sample event' sections with the mustache placeholder: {{event "data_stream_name"}}
-3. Restructure the entire document to follow the new template format provided
-4. Preserve all existing content that doesn't conflict with the template structure
-5. Ensure that the Elastic Agent section refers to "Elastic Agent must be installed"
-6. Format your response appropriately for a Markdown file
-7. Sync the document with the new template structure
-
-Return ONLY the updated Markdown content, without any explanation or commentary.`
-
-	// User prompt template for the LLM
-	userPromptTemplate = `I need to update this README.md file to match our new documentation template.
-
+Here is some context for you to reference for your task, read it carefully as you will get questions about it later:
 # Original README content:
 %s
 
 # New template structure:
 %s
+`
+	// User prompt template for the LLM
+	userPromptTemplate = `I need to update this README.md file to match our new documentation template.
 
-Please update the README content to match the new template structure, replacing:
-1. Any 'Exported fields' sections with the mustache placeholder: {{fields "data_stream_name"}}
-2. Any 'Sample event' sections with the mustache placeholder: {{event "data_stream_name"}}
-3. Maintain the overall structure from the new template
-4. Preserve existing content that remains relevant`
+Follow these exact guidelines:
+1. Always utilize the original content of the README.md file where possible
+2. Restructure the document to follow the new template format provided
+3. If any content is not relevant to the new template, copy it to the Reference section and add a note it in a code comment for why it should be removed
+4. Do not include the following from the tempalte: initial comment from the template, the header placeholder, or the Reference -> ECS field reference section
+5. Always organize the datastreams together under their own Data Stream section. For each datastream there should be
+a brief summary, exported fields, and sample events sections all separated with an empty line.
+6. Always prefix sample event placeholders with 'An example event for "data_stream_name" looks as following:'.
+7. Format your response appropriately for a Markdown file
+8. Replace any 'Exported fields' sections with the mustache placeholder: {{fields "data_stream_name"}}
+9. Replace any 'Sample event' sections with the mustache placeholder: {{event "data_stream_name"}}
+10. If there is no content for a section, you must add a code comment with some guidance to the user on what to add.
+11. Sync the document with the new template structure
+
+Return ONLY the updated Markdown content, without any explanation or commentary.`
 )
 
 var (
 	googleAPIKey string
 	packagePath  string
 	verbose      bool
-	dryRun       bool
 )
 
 func init() {
 	flag.StringVar(&googleAPIKey, "api-key", "", "Google Gemini API key (required)")
 	flag.StringVar(&packagePath, "path", ".", "Path to the package directory")
 	flag.BoolVar(&verbose, "verbose", false, "Enable verbose logging")
-	flag.BoolVar(&dryRun, "dry-run", false, "Generate patch but don't write changes to file")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
@@ -258,14 +258,12 @@ func processPackage(pkgPath string) (string, error) {
 		return "", fmt.Errorf("failed to generate patch: %w", err)
 	}
 
-	// If not dry run, write the changes
-	if !dryRun {
-		if err := os.WriteFile(targetPath, []byte(updatedContent), 0644); err != nil {
-			return "", fmt.Errorf("failed to write updated readme: %w", err)
-		}
-		if verbose {
-			log.Printf("Updated readme written to %s", targetPath)
-		}
+	// Write the changes
+	if err := os.WriteFile(targetPath, []byte(updatedContent), 0644); err != nil {
+		return "", fmt.Errorf("failed to write updated readme: %w", err)
+	}
+	if verbose {
+		log.Printf("Updated readme written to %s", targetPath)
 	}
 
 	return patch, nil
@@ -291,7 +289,9 @@ func fetchTemplate() (string, error) {
 }
 
 func generateUpdatedReadme(readmeContent, templateContent string) (string, error) {
-	ctx := context.Background()
+	// Create context with 5 minute timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 	
 	// Create a Gemini client
 	client, err := genai.NewClient(ctx, option.WithAPIKey(googleAPIKey))
@@ -317,8 +317,8 @@ func generateUpdatedReadme(readmeContent, templateContent string) (string, error
 		}
 	}
 
-	// Use the gemini-1.5-pro model directly
-	modelName := "gemini-1.5-pro"
+	// Use the gemini-2.5-pro model directly
+	modelName := "gemini-2.5-pro"
 	if verbose {
 		log.Printf("Using model: %s", modelName)
 	}

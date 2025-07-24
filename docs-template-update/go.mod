@@ -1,4 +1,4 @@
-module github.com/andrewkroh/go-examples/docs-template-update
+module github.com/kgeller/go-examples/docs-template-update
 
 go 1.24.2
 

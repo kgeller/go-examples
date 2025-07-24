@@ -1,90 +1,61 @@
-<!-- This template can be used as a starting point for writing documentation for your new integration. For each section, fill in the details
-described in the comments.
+# AbuseCH integration
 
-Find more detailed documentation guidelines in https://www.elastic.co/docs/extend/integrations/documentation-guidelines
--->
+This integration is for [AbuseCH](https://urlhaus.abuse.ch/) logs. It includes the following datasets for retrieving indicators from the AbuseCH API:
 
-<!-- Do not remove header -->
-{{ `{{header}}` }}
-# 1Password Events Reporting Integration for Elastic
+- `url` dataset: Supports URL based indicators from AbuseCH API.
+- `malware` dataset: Supports Malware based indicators from AbuseCH API.
+- `malwarebazaar` dataset: Supports indicators from the MalwareBazaar from AbuseCH.
+- `threatfox` dataset: Supports indicators from AbuseCH Threat Fox API.
 
-## Overview
+## Note:
 
-The 1Password Events Reporting integration for Elastic enables collection of 1Password account activity and facilitates security monitoring and analysis.  This integration allows you to send your account activity to your security information and event management (SIEM) system using the 1Password Events API. Get reports about 1Password activity, such as sign-in attempts and item usage, while you manage all your company’s applications and services from a central location.
+AbuseCH requires using an `Auth Key` (API Key) in the requests for authentication.
+Requests without authentication will be denied by the API.
 
-With 1Password Events Reporting and Elastic SIEM, you can:
+More details on this topic can be found [here](https://abuse.ch/blog/community-first/).
 
--	Control your 1Password data retention
--	Build custom graphs and dashboards
--	Set up custom alerts that trigger specific actions
--	Cross-reference 1Password events with the data from other services
+## Agentless Enabled Integration
 
-### Compatibility
+Agentless integrations allow you to collect data without having to manage Elastic Agent in your cloud. They make manual agent deployment unnecessary, so you can focus on your data instead of the agent that collects it. For more information, refer to [Agentless integrations](https://www.elastic.co/guide/en/serverless/current/security-agentless-integrations.html) and the [Agentless integrations FAQ](https://www.elastic.co/guide/en/serverless/current/agentless-integration-troubleshooting.html).
 
-This integration is compatible with 1Password Business.
+Agentless deployments are only supported in Elastic Serverless and Elastic Cloud environments.  This functionality is in beta and is subject to change. Beta features are not subject to the support SLA of official GA features.
 
-### How it works
+## Expiration of Indicators of Compromise (IOCs)
+All AbuseCH datasets now support indicator expiration. For `URL` dataset, a full list of active indicators are ingested every interval. For other datasets namely `Malware`, `MalwareBazaar`, and `ThreatFox`, the indicators are expired after duration `IOC Expiration Duration` configured in the integration setting. An [Elastic Transform](https://www.elastic.co/guide/en/elasticsearch/reference/current/transforms.html) is created for every source index to facilitate only active indicators be available to the end users. Each transform creates a destination index named `logs-ti_abusech_latest.dest_*` which only contains active and unexpired indicators. The indiator match rules and dashboards are updated to list only active indicators.
+Destinations indices are aliased to `logs-ti_abusech_latest.<datastream_name>`.
 
-This integration uses the 1Password Events API to retrieve event data.
+| Source Datastream                  | Destination Index Pattern                        | Destination Alias                       |
+|:-----------------------------------|:-------------------------------------------------|-----------------------------------------|
+| `logs-ti_abusech.url-*`            | `logs-ti_abusech_latest.dest_url-*`              | `logs-ti_abusech_latest.url`            |
+| `logs-ti_abusech.malware-*`        | `logs-ti_abusech_latest.dest_malware-*`          | `logs-ti_abusech_latest.malware`        |
+| `logs-ti_abusech.malwarebazaar-*`  | `logs-ti_abusech_latest.dest_malwarebazaar-*`    | `logs-ti_abusech_latest.malwarebazaar`  |
+| `logs-ti_abusech.threatfox-*`      | `logs-ti_abusech_latest.dest_threatfox-*`        | `logs-ti_abusech_latest.threatfox`      |
 
-## What data does this integration collect?
+### ILM Policy
+To facilitate IOC expiration, source datastream-backed indices `.ds-logs-ti_abusech.<datastream_name>-*` are allowed to contain duplicates from each polling interval. ILM policy `logs-ti_abusech.<datastream_name>-default_policy` is added to these source indices so it doesn't lead to unbounded growth. This means data in these source indices will be deleted after `5 days` from ingested date. 
 
-The 1Password Events Reporting integration collects the following types of events:
-* Sign-in attempts
-* Item usages
-* Audit events
+## Logs
 
-### Supported use cases
+### URL
 
-This integration allows security teams to monitor and analyze 1Password activity for potential security threats.  It enables organizations to centralize their security monitoring and gain insights into user behavior.
+The AbuseCH URL data_stream retrieves full list of active threat intelligence indicators every interval from the Active Indicators URL database dump `https://urlhaus.abuse.ch/downloads/json/`.
 
-## What do I need to use this integration?
+{{fields "url"}}
 
-Elastic Agent must be installed. For more details, check the Elastic Agent [installation instructions](docs-content://reference/fleet/install-elastic-agents.md). You can install only one Elastic Agent per host.
+### Malware
 
-Elastic Agent is required to stream data from the syslog or log file receiver and ship the data to Elastic, where the events will then be processed via the integration's ingest pipelines.
+The AbuseCH malware data_stream retrieves threat intelligence indicators from the payload API endpoint `https://urlhaus-api.abuse.ch/v1/payloads/recent/`.
 
-You must be an owner or administrator of a 1Password Business account. You also need to configure the Events Reporting integration in 1Password.  [Learn how to set up the Elastic Events Reporting integration](https://support.1password.com/events-reporting).
+{{fields "malware"}}
 
+### MalwareBazaar
 
-## How do I deploy this integration?
+The AbuseCH malwarebazaar data_stream retrieves threat intelligence indicators from the MalwareBazaar API endpoint `https://mb-api.abuse.ch/api/v1/`.
 
-### Onboard / configure
+{{fields "malwarebazaar"}}
 
-<!-- List the steps that will need to be followed in order to completely set up a working integration.
-For integrations that support multiple input types, be sure to add steps for all inputs.
--->
+### Threat Fox
 
-### Validation
+The AbuseCH threatfox data_stream retrieves threat intelligence indicators from the Threat Fox API endpoint `https://threatfox-api.abuse.ch/api/v1/`.
 
-<!-- How can the user test whether the integration is working? Including example commands or test files if applicable -->
-
-## Troubleshooting
-
-For help with Elastic ingest tools, check [Common problems](https://www.elastic.co/docs/troubleshoot/ingest/fleet/common-problems).
-
-
-## Scaling
-
-For more information on architectures that can be used for scaling this integration, check the [Ingest Architectures](https://www.elastic.co/docs/manage-data/ingest/ingest-reference-architectures) documentation.
-
-## Reference
-
-### ECS field Reference
-
-{{ `{{fields "item_usages"}}` }}
-
-### Sample Event
-
-{{ `{{event "item_usages"}}` }}
-
-### Inputs used
-
-<!-- List inputs used in this integration, and link to the documentation -->
-These inputs can be used with this integration:
-* ...
-
-### API usage
-
-This integration utilizes the 1Password Events API.
-
+{{fields "threatfox"}}
