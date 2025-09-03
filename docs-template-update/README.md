@@ -2,6 +2,8 @@
 
 A Go tool for updating package documentation templates to match the new Elastic standardized format.
 
+Reference the [Elastic documentation](https://www.elastic.co/docs/extend/integrations/documentation-guidelines) for more information about the README guidelines.
+
 ## Requirements
 
 - Go 1.24 or later
